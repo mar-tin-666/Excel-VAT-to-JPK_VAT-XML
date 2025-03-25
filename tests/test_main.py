@@ -3,12 +3,12 @@
 import tempfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from unittest import mock
 
 import pandas as pd
 import pytest
 
 from main import normalize_columns, find_column, sanitize_filename, generate_xml, main
+
 
 def test_normalize_columns():
     """Test stripping and trimming column names."""
@@ -16,15 +16,18 @@ def test_normalize_columns():
     expected = ["VAT Base", "Document Date", "Type"]
     assert normalize_columns(cols) == expected
 
+
 def test_find_column_exact():
     """Test exact column name matching."""
     cols = ["Type", "Document Type", "VAT Amount"]
     assert find_column(cols, "Type") == "Type"
 
+
 def test_find_column_partial():
     """Test partial column name matching."""
     cols = ["VAT Registration Number", "External Doc"]
     assert find_column(cols, "VAT Registration") == "VAT Registration Number"
+
 
 def test_find_column_not_found():
     """Test error raised when column not found."""
@@ -32,9 +35,11 @@ def test_find_column_not_found():
     with pytest.raises(KeyError):
         find_column(cols, "Type")
 
+
 def test_sanitize_filename():
     """Test sanitizing a filename with forbidden characters."""
     assert sanitize_filename("Test/Doc:2024|Name.xlsx") == "Test_Doc_2024_Name.xlsx"
+
 
 def test_generate_xml_creates_valid_file():
     """Test XML generation from simple one-row DataFrame."""
@@ -71,15 +76,41 @@ def test_generate_xml_creates_valid_file():
         assert root.find("ns:Naglowek", ns_map) is not None
         assert root.find("ns:Deklaracja", ns_map) is not None
         assert root.find("ns:Ewidencja/ns:ZakupWiersz/ns:LpZakupu", ns_map).text == "1"
-        assert root.find("ns:Ewidencja/ns:ZakupWiersz/ns:K_42", ns_map).text == "1000.00"
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupWiersz/ns:K_42", ns_map).text == "1000.00"
+        )
         assert root.find("ns:Ewidencja/ns:ZakupWiersz/ns:K_43", ns_map).text == "230.00"
-        assert root.find("ns:Ewidencja/ns:ZakupWiersz/ns:DataZakupu", ns_map).text == "2024-03-01"
-        assert root.find("ns:Ewidencja/ns:ZakupWiersz/ns:DataWplywu", ns_map).text == "2024-03-02"
-        assert root.find("ns:Ewidencja/ns:ZakupWiersz/ns:NrDostawcy", ns_map).text == "1234567890"
-        assert root.find("ns:Ewidencja/ns:ZakupCtrl/ns:LiczbaWierszyZakupow", ns_map).text == "1"
-        assert root.find("ns:Ewidencja/ns:ZakupCtrl/ns:PodatekNaliczony", ns_map).text == "230.00"
-        assert root.find("ns:Ewidencja/ns:SprzedazCtrl/ns:LiczbaWierszySprzedazy", ns_map).text == "0"
-        assert root.find("ns:Ewidencja/ns:SprzedazCtrl/ns:PodatekNalezny", ns_map).text == "0"
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupWiersz/ns:DataZakupu", ns_map).text
+            == "2024-03-01"
+        )
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupWiersz/ns:DataWplywu", ns_map).text
+            == "2024-03-02"
+        )
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupWiersz/ns:NrDostawcy", ns_map).text
+            == "1234567890"
+        )
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupCtrl/ns:LiczbaWierszyZakupow", ns_map).text
+            == "1"
+        )
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupCtrl/ns:PodatekNaliczony", ns_map).text
+            == "230.00"
+        )
+        assert (
+            root.find(
+                "ns:Ewidencja/ns:SprzedazCtrl/ns:LiczbaWierszySprzedazy", ns_map
+            ).text
+            == "0"
+        )
+        assert (
+            root.find("ns:Ewidencja/ns:SprzedazCtrl/ns:PodatekNalezny", ns_map).text
+            == "0"
+        )
+
 
 def test_generate_xml_empty_df():
     """Test XML generation with empty DataFrame should produce valid but empty ZakupCtrl."""
@@ -110,14 +141,22 @@ def test_generate_xml_empty_df():
 
         tree = ET.parse(output_path)
         root = tree.getroot()
-        assert root.find("ns:Ewidencja/ns:ZakupCtrl/ns:LiczbaWierszyZakupow", ns_map).text == "0"
-        assert root.find("ns:Ewidencja/ns:ZakupCtrl/ns:PodatekNaliczony", ns_map).text == "0.00"
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupCtrl/ns:LiczbaWierszyZakupow", ns_map).text
+            == "0"
+        )
+        assert (
+            root.find("ns:Ewidencja/ns:ZakupCtrl/ns:PodatekNaliczony", ns_map).text
+            == "0.00"
+        )
+
 
 def test_main_with_missing_file(monkeypatch):
     """Test main exits when provided file path does not exist."""
     with pytest.raises(SystemExit):
         monkeypatch.setattr("builtins.input", lambda _: "nonexistent.xlsx")
         main()
+
 
 def test_main_skips_sheet_without_required_columns(monkeypatch, tmp_path):
     """Test that main skips sheets without expected columns."""
